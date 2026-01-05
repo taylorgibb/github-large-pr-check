@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: developerhut/github-large-pr-check@v1.0.0
+      - uses: taylorgibb/github-large-pr-check@v1.0.0
         with:
           target_branch: ${{ github.event.pull_request.base.ref }}
           max_lines_changed: 500
