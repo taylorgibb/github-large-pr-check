@@ -1,0 +1,67 @@
+name: "GitHub Large PR Check"
+description: "Comments on PR if number of lines changed is excessive"
+author: "Taylor Gibb"
+branding:
+  icon: "alert-octagon"
+  color: "purple"
+
+inputs:
+  max_lines_changed:
+    description: "Maximum number of lines changed allowed"
+    required: true
+    default: "400"
+  target_branch:
+    description: The branch to compare against
+    required: true
+    default: main
+  exclude_paths:
+    description: "Newline-separated list of pathspec patterns to exclude (e.g., *package-lock.json)"
+    required: false
+    default: ""
+outputs:
+  total_lines_changed:
+    description: "Total lines changed in this PR"
+    value: ${{ steps.get_total_lines_changed.outputs.total_lines_changed }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: fetch_target_branch
+      run: |
+        git fetch origin ${{ inputs.target_branch }}
+      shell: bash
+    - id: get_total_lines_changed
+      run: |
+        excludes=""
+        if [[ -n "${{ inputs.exclude_paths }}" ]]; then
+          while IFS= read -r pattern; do
+            if [[ -n "$pattern" ]]; then
+              excludes="$excludes ':(exclude)$pattern'"
+            fi
+          done <<< "${{ inputs.exclude_paths }}"
+        fi
+
+        cmd="git diff --shortstat origin/${{ inputs.target_branch }} $excludes"
+        size=$(eval $cmd | awk '{ print $4+$6 }' | awk -F- '{print $NF}' | bc)
+
+        echo ""
+        if [[ -n "$excludes" ]]; then
+          echo "Excluded patterns: $excludes"
+        fi
+        echo "Total lines changed: $size"
+        echo "total_lines_changed=$size" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Comment PR
+      if: ${{ fromJSON(steps.get_total_lines_changed.outputs.total_lines_changed) > fromJSON(inputs.max_lines_changed) }}
+      uses: thollander/actions-comment-pull-request@v2
+      with:
+        comment_tag: pr_size
+        mode: recreate
+        message: |
+          :boom: :boom: :boom:
+          Total lines changed ${{ steps.get_total_lines_changed.outputs.total_lines_changed }} is greater than ${{ inputs.max_lines_changed }}.
+          Please consider breaking this PR down.
+    - id: fail
+      if: ${{ fromJSON(steps.get_total_lines_changed.outputs.total_lines_changed) > fromJSON(inputs.max_lines_changed) }}
+      run: exit 1
+      shell: bash
