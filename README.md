@@ -32,12 +32,6 @@ jobs:
 | `target_branch` | The branch to compare against | Yes | `main` |
 | `exclude_paths` | Newline-separated list of pathspec patterns to exclude | No | `""` |
 
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `total_lines_changed` | Total lines changed in this PR (after exclusions) |
-
 ## Common Exclusion Patterns
 
 The `exclude_paths` input uses git pathspec patterns. Here are common patterns you might want to exclude:
